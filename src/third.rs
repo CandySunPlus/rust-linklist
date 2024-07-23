@@ -44,13 +44,21 @@ impl<T> List<T> {
 }
 
 impl<T> Drop for List<T> {
+    //
+    // `drop` to the first `Node` referenced by other lists
+    //
+    // list1 -> A ---+
+    //               |
+    //               v
+    // list2 ------> B -> C -> D
+    //               ^
+    //               |
+    // list3 -> X ---+
     fn drop(&mut self) {
-        let mut head = self.head.take();
-        while let Some(node) = head {
-            if let Ok(mut node) = Rc::try_unwrap(node) {
-                head = node.next.take();
-            } else {
-                break;
+        while let Some(node) = self.head.take() {
+            match Rc::try_unwrap(node) {
+                Ok(n) => self.head = n.next,
+                Err(_) => break,
             }
         }
     }
