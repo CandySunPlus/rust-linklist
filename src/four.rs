@@ -1,4 +1,7 @@
-use std::{cell::RefCell, rc::Rc};
+use std::{
+    cell::{Ref, RefCell},
+    rc::Rc,
+};
 
 #[derive(Default)]
 pub struct List<T> {
@@ -86,6 +89,12 @@ impl<T> List<T> {
             Rc::try_unwrap(old_tail).ok().unwrap().into_inner().elem
         })
     }
+
+    pub fn peek_front(&self) -> Option<Ref<T>> {
+        self.head
+            .as_ref()
+            .map(|node| Ref::map(node.borrow(), |node| &node.elem))
+    }
 }
 
 impl<T> Drop for List<T> {
@@ -96,6 +105,7 @@ impl<T> Drop for List<T> {
 
 #[cfg(test)]
 mod test {
+
     use super::*;
 
     #[test]
@@ -133,5 +143,16 @@ mod test {
         }
 
         drop(list);
+    }
+
+    #[test]
+    fn peek() {
+        let mut list = List::default();
+        assert!(list.peek_front().is_none());
+        list.push(1);
+        list.push(2);
+        list.push(3);
+
+        assert_eq!(list.peek_front().as_deref(), Some(&1));
     }
 }
