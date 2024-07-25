@@ -1,7 +1,5 @@
-use std::{
-    cell::{Ref, RefCell, RefMut},
-    rc::Rc,
-};
+use std::cell::{Ref, RefCell, RefMut};
+use std::rc::Rc;
 
 #[derive(Default)]
 pub struct List<T> {
