@@ -62,6 +62,12 @@ impl<T> List<T> {
     }
 }
 
+impl<T> Drop for List<T> {
+    fn drop(&mut self) {
+        while let Some(_) = self.pop() {}
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -102,5 +108,16 @@ mod test {
         assert_eq!(list.pop(), Some(6));
         assert_eq!(list.pop(), Some(7));
         assert_eq!(list.pop(), None);
+    }
+
+    #[test]
+    fn long_list() {
+        let mut list = List::default();
+
+        for i in 0..1_000_000 {
+            list.push(i);
+        }
+
+        drop(list);
     }
 }
