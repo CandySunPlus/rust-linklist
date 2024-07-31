@@ -1,4 +1,4 @@
-use std::ptr::NonNull;
+use std::{marker::PhantomData, ptr::NonNull};
 
 #[derive(Default)]
 pub struct LinkedList<T> {
@@ -15,6 +15,58 @@ struct Node<T> {
     elem: T,
 }
 
+pub struct Iter<'a, T> {
+    front: Link<T>,
+    back: Link<T>,
+    len: usize,
+    _marker: PhantomData<&'a T>,
+}
+
+pub struct IterMut<'a, T> {
+    front: Link<T>,
+    back: Link<T>,
+    len: usize,
+    _marker: PhantomData<&'a mut T>,
+}
+
+pub struct IntoIter<T> {
+    list: LinkedList<T>,
+}
+
+impl<'a, T> IntoIterator for &'a LinkedList<T> {
+    type Item = &'a T;
+    type IntoIter = Iter<'a, T>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        Iter {
+            front: self.front,
+            back: self.back,
+            len: self.len,
+            _marker: PhantomData,
+        }
+    }
+}
+
+impl<'a, T> Iterator for Iter<'a, T> {
+    type Item = &'a T;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.len > 0 {
+            self.front.map(|node| unsafe {
+                self.len -= 1;
+                self.front = node.as_ref().back;
+                &node.as_ref().elem
+            })
+        } else {
+            None
+        }
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        (self.len, Some(self.len))
+    }
+}
+
 impl<T> LinkedList<T> {
     pub fn push_front(&mut self, elem: T) {
         unsafe {
@@ -28,9 +80,6 @@ impl<T> LinkedList<T> {
                 old.as_mut().front = Some(new);
                 new.as_mut().back = Some(*old);
             } else {
-                debug_assert!(self.back.is_none());
-                debug_assert!(self.front.is_none());
-                debug_assert!(self.len == 0);
                 self.back = Some(new);
             }
             self.front = Some(new);
@@ -49,7 +98,6 @@ impl<T> LinkedList<T> {
                 if let Some(new) = self.front.as_mut() {
                     new.as_mut().front = None;
                 } else {
-                    debug_assert!(self.len == 1);
                     self.back = None;
                 }
 
@@ -61,6 +109,28 @@ impl<T> LinkedList<T> {
 
     pub fn len(&self) -> usize {
         self.len
+    }
+
+    pub fn front(&self) -> Option<&T> {
+        unsafe { self.front.map(|node| &node.as_ref().elem) }
+    }
+
+    pub fn front_mut(&mut self) -> Option<&mut T> {
+        unsafe { self.front.as_mut().map(|node| &mut node.as_mut().elem) }
+    }
+
+    pub fn back(&self) -> Option<&T> {
+        unsafe { self.back.map(|node| &node.as_ref().elem) }
+    }
+
+    pub fn back_mut(&mut self) -> Option<&T> {
+        unsafe { self.back.as_mut().map(|node| &node.as_mut().elem) }
+    }
+}
+
+impl<T> Drop for LinkedList<T> {
+    fn drop(&mut self) {
+        while self.pop_front().is_some() {}
     }
 }
 
